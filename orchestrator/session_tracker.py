@@ -29,7 +29,14 @@ class SessionTracker:
     def __init__(self):
         """Initialize session tracker"""
 
-    def get_active_sessions(self) -> list[dict[str, Any]]:
+    def get_active_sessions(
+        self,
+        status: str | None = None,
+        since: str | None = None,
+        sort_by: str | None = "start_time",
+        order: str | None = "desc",
+    ) -> list[dict[str, Any]]:
+    
         """
         Get all currently active sessions (CREATED, QUEUED, PROCESSING)
 
@@ -46,14 +53,33 @@ class SessionTracker:
                 "AUDIO_PROCESSING",
                 "EVALUATING",
             ]
-            sessions = (
-                session_db.execute(
-                    select(InterviewSession).where(InterviewSession.status.in_(active_statuses))
+            stmt = select(InterviewSession).where(
+                InterviewSession.status.in_(active_statuses)
+            )
+
+            if status:
+                stmt = stmt.where(
+                    InterviewSession.status == status.upper()
                 )
+
+            if since:
+                try:
+                    since_dt = datetime.fromisoformat(
+                        since.replace("Z", "+00:00")
+                    )
+                    stmt = stmt.where(
+                        InterviewSession.start_time >= since_dt
+                    )
+                except ValueError:
+                    raise ValueError(
+                        f"Invalid ISO datetime format for 'since': {since}"
+                    )
+
+            sessions = (
+                session_db.execute(stmt)
                 .scalars()
                 .all()
             )
-
             result = []
             for s in sessions:
                 result.append(
