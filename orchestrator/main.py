@@ -947,7 +947,7 @@ def _build_risk_report_pdf(report: dict) -> Response:
     fields = [
         ("Session ID", report.get("session_id")),
         ("Candidate ID", report.get("candidate_id")),
-        ("Status", report.get("status")),
+        ("Status", report.get("status")), 
         ("Risk Score", report.get("risk_score")),
         ("Start Time", report.get("start_time")),
         ("End Time", report.get("end_time")),
@@ -1005,6 +1005,10 @@ async def get_task_status(
 @app.get("/active-sessions")
 @http_cache.cached("active-sessions", ttl=2)
 async def get_active_sessions(
+    status: str | None = None,
+    since: str | None = None,
+    sort_by: str | None = "start_time",
+    order: str | None = "desc",
     session_db: Session = Depends(get_db),
 ):
     """
@@ -1016,7 +1020,12 @@ async def get_active_sessions(
         dict: List of active sessions with brief details
     """
     try:
-        active = session_tracker.get_active_sessions()
+        active = session_tracker.get_active_sessions(
+    status=status,
+    since=since,
+    sort_by=sort_by,
+    order=order,
+)
         return {"count": len(active), "sessions": active}
     except Exception as e:
         logger.error(f"Error fetching active sessions: {e!s}")
