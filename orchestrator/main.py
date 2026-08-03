@@ -1010,6 +1010,10 @@ async def get_task_status(
 @app.get("/active-sessions")
 @http_cache.cached("active-sessions", ttl=2)
 async def get_active_sessions(
+    status: str | None = None,
+    since: str | None = None,
+    sort_by: str | None = "start_time",
+    order: str | None = "desc",
     session_db: Session = Depends(get_db),
 ):
     """
@@ -1021,11 +1025,30 @@ async def get_active_sessions(
         dict: List of active sessions with brief details
     """
     try:
-        active = session_tracker.get_active_sessions()
-        return {"count": len(active), "sessions": active}
+        active = session_tracker.get_active_sessions(
+            status=status,
+            since=since,
+            sort_by=sort_by,
+            order=order,
+        )
+
+        return {
+            "count": len(active),
+            "sessions": active,
+        }
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e),
+        )
+
     except Exception as e:
         logger.error(f"Error fetching active sessions: {e!s}")
-        raise HTTPException(status_code=500, detail="Error fetching active sessions")
+        raise HTTPException(
+            status_code=500,
+            detail="Error fetching active sessions",
+        )
 
 
 @app.get("/completed-sessions")
