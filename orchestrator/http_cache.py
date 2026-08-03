@@ -74,24 +74,46 @@ def cached(name: str, ttl: int = _DEFAULT_TTL) -> Callable:
 
             @wraps(fn)
             async def async_wrapper(*args, **kwargs):
-                hit = get(name)
+                cache_key = name
+
+                if kwargs:
+                    params = "&".join(
+                        f"{k}={v}" for k, v in sorted(kwargs.items())
+                    )
+                    cache_key = f"{name}:{params}"
+
+                hit = get(cache_key)
                 if hit is not None:
                     return hit
+
                 result = await fn(*args, **kwargs)
+
                 if isinstance(result, (dict, list)):
-                    set(name, result, ttl=ttl)
+                    set(cache_key, result, ttl=ttl)
+
                 return result
 
             return async_wrapper
 
         @wraps(fn)
         def sync_wrapper(*args, **kwargs):
-            hit = get(name)
+            cache_key = name
+
+            if kwargs:
+                params = "&".join(
+                    f"{k}={v}" for k, v in sorted(kwargs.items())
+                )
+                cache_key = f"{name}:{params}"
+
+            hit = get(cache_key)
             if hit is not None:
                 return hit
+
             result = fn(*args, **kwargs)
+
             if isinstance(result, (dict, list)):
-                set(name, result, ttl=ttl)
+                set(cache_key, result, ttl=ttl)
+
             return result
 
         return sync_wrapper
